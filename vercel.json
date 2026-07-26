@@ -1,7 +1,12 @@
 {
   "version": 2,
-  "buildCommand": "BASE_PATH=/ PORT=4173 pnpm --filter @workspace/edutoppers run build",
+  "buildCommand": "pnpm --filter @workspace/api-server run build && BASE_PATH=/ PORT=4173 pnpm --filter @workspace/edutoppers run build",
   "outputDirectory": "artifacts/edutoppers/dist",
+  "functions": {
+    "api/[[...path]].ts": {
+      "includeFiles": "artifacts/api-server/dist/**"
+    }
+  },
   "rewrites": [
     {
       "source": "/((?!api(?:/|$)).*)",
