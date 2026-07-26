@@ -1,4 +1,3 @@
-"use client";
 import { useState } from "react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
