@@ -96,7 +96,18 @@ export default function BatchPage() {
   });
 
   const batchDetail = detailsQuery.data?.data || detailsQuery.data;
-  const subjects: Subject[] = batchDetail?.subjects || [];
+  const subjects: Subject[] = Array.isArray(batchDetail?.subjects)
+    ? batchDetail.subjects
+    : [];
+  const startDate = batchDetail?.startDate ? new Date(batchDetail.startDate) : null;
+  const status = String(batchDetail?.status || "").toLowerCase();
+  const hasNotStarted =
+    status.includes("upcoming") ||
+    status.includes("not started") ||
+    status.includes("coming soon") ||
+    (startDate !== null &&
+      !Number.isNaN(startDate.getTime()) &&
+      startDate.getTime() > Date.now());
 
   const allTeachers: Teacher[] = Array.from(
     new Map(
@@ -222,6 +233,23 @@ export default function BatchPage() {
 
           {/* Subjects */}
           {activeTab === "subjects" && (
+            subjects.length === 0 ? (
+              <div className="card rounded-3xl p-10 sm:p-16 text-center max-w-2xl mx-auto animate-fade-up">
+                <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center mx-auto mb-5">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332 0 4.5 1.253" />
+                  </svg>
+                </div>
+                <h2 className="text-slate-900 font-extrabold text-xl mb-2">
+                  {hasNotStarted ? "Batch has not started yet" : "No subjects available"}
+                </h2>
+                <p className="text-slate-500 text-sm leading-relaxed">
+                  {hasNotStarted
+                    ? "Subjects and course content will appear here when this batch begins."
+                    : "There are no subjects available for this batch right now. Please check back later."}
+                </p>
+              </div>
+            ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {subjects.map((subject, i) => {
                 const p = getPalette(subject.subject);
@@ -265,8 +293,9 @@ export default function BatchPage() {
                   </Link>
                 );
               })}
-            </div>
-          )}
+             </div>
+             )
+           )}
 
           {/* Live */}
           {activeTab === "live" && (
