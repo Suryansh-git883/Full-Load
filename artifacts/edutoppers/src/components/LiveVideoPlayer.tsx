@@ -1,3 +1,5 @@
+import { useVideoLoadGuard } from "@/lib/videoGuard";
+
 /**
  * LiveVideoPlayer — same vidcloud iframe as VideoPlayer but semantically for live/vod classes.
  */
@@ -20,6 +22,7 @@ export default function LiveVideoPlayer({
   onClose,
   fullPage = false,
 }: LiveVideoPlayerProps) {
+  const { handleLoad, handleError } = useVideoLoadGuard();
   const params = new URLSearchParams({
     batch_id: batchId,
     subject_id: subjectId,
@@ -41,6 +44,8 @@ export default function LiveVideoPlayer({
       allowFullScreen
       referrerPolicy="no-referrer"
       title={title || "Live Class"}
+      onLoad={handleLoad}
+      onError={handleError}
     />
   );
 

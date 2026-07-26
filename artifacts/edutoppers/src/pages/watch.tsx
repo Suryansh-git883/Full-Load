@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { useSearch } from "wouter";
+import { useVideoLoadGuard, redirectToHome } from "@/lib/videoGuard";
 
 /**
  * Full-page video player using vidcloud.eu.org embed.
@@ -14,23 +16,18 @@ export default function WatchPage() {
   const lectureId = sp.get("lectureId") || "";
   const title = sp.get("title") || "Video";
   const img = sp.get("img") || "";
+  const { handleLoad, handleError } = useVideoLoadGuard();
 
   function handleClose() {
-    try { window.close(); } catch {}
-    setTimeout(() => { window.history.back(); }, 100);
+    redirectToHome();
   }
 
+  useEffect(() => {
+    if (!batchId || !lectureId) redirectToHome();
+  }, [batchId, lectureId]);
+
   if (!batchId || !lectureId) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-black">
-        <div className="text-center space-y-4">
-          <p className="text-white/50">Invalid video link.</p>
-          <button onClick={handleClose} className="px-5 py-2 bg-indigo-600 rounded-xl text-white text-sm font-bold">
-            Close
-          </button>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   const vidcloudUrl = (() => {
@@ -75,6 +72,8 @@ export default function WatchPage() {
           allowFullScreen
           referrerPolicy="no-referrer"
           title={decodeURIComponent(title)}
+          onLoad={handleLoad}
+          onError={handleError}
         />
       </div>
     </div>

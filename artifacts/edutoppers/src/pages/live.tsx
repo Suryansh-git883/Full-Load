@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { useSearch } from "wouter";
 import LiveVideoPlayer from "@/components/LiveVideoPlayer";
+import { redirectToHome } from "@/lib/videoGuard";
 
 export default function LivePage() {
   const search = useSearch();
@@ -11,21 +13,15 @@ export default function LivePage() {
   const title = sp.get("title") || "Live Class";
 
   function handleClose() {
-    try { window.close(); } catch {}
-    setTimeout(() => { window.history.back(); }, 150);
+    redirectToHome();
   }
 
+  useEffect(() => {
+    if (!videoId || !batchId) redirectToHome();
+  }, [videoId, batchId]);
+
   if (!videoId || !batchId) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center" style={{ background: "rgba(2,4,12,0.98)" }}>
-        <div className="text-center">
-          <p className="text-white/50 mb-4">Invalid class link.</p>
-          <button onClick={handleClose} className="px-4 py-2 bg-red-600 rounded-xl text-white text-sm font-bold">
-            Close
-          </button>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (

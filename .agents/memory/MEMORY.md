@@ -1,0 +1,1 @@
+- [Video player failure handling](video-player-failure-handling.md) — third-party iframe playback needs a load/error guard and a timeout fallback.

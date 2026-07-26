@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import { fetchContent, fetchScheduleDetails } from "@/lib/api";
 import type { ContentItem, HomeworkItem } from "@/lib/types";
+import { useVideoLoadGuard } from "@/lib/videoGuard";
 
 /** contentType values expected by the new API */
 const CONTENT_TYPE_MAP: Record<"lectures" | "notes" | "dpp", string> = {
@@ -126,6 +127,8 @@ function ClassNotesButton({ item, batchId, subjectId }: { item: ContentItem; bat
 
 /** In-page video player (iframe) - used for YouTube-type inline plays */
 function InlinePlayer({ url, onClose }: { url: string; onClose: () => void }) {
+  const { handleLoad, handleError } = useVideoLoadGuard();
+
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
       <div className="flex items-center gap-3 px-4 h-12 flex-shrink-0 border-b border-white/10">
@@ -135,7 +138,14 @@ function InlinePlayer({ url, onClose }: { url: string; onClose: () => void }) {
           </svg>
         </button>
       </div>
-      <iframe src={url} className="flex-1 w-full border-0" allow="autoplay; fullscreen" allowFullScreen />
+      <iframe
+        src={url}
+        className="flex-1 w-full border-0"
+        allow="autoplay; fullscreen"
+        allowFullScreen
+        onLoad={handleLoad}
+        onError={handleError}
+      />
     </div>
   );
 }

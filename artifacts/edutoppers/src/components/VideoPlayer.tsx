@@ -1,3 +1,5 @@
+import { useVideoLoadGuard } from "@/lib/videoGuard";
+
 /**
  * VideoPlayer — renders a vidcloud.eu.org iframe.
  * All stream resolution (HLS, DASH, DRM) is handled by the external player.
@@ -19,6 +21,7 @@ export default function VideoPlayer({
   img = "",
   className = "",
 }: VideoPlayerProps) {
+  const { handleLoad, handleError } = useVideoLoadGuard();
   const params = new URLSearchParams({
     batch_id: batchId,
     subject_id: subjectId,
@@ -40,6 +43,8 @@ export default function VideoPlayer({
       allowFullScreen
       referrerPolicy="no-referrer"
       title={title || "Video Player"}
+      onLoad={handleLoad}
+      onError={handleError}
     />
   );
 }
