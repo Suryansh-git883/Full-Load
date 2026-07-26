@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pw.modgalaxy.in — API & Data Format Map</title>
+<style>
+  :root{
+    --bg:#0a0e1a; --panel:#111827; --panel2:#0d1320; --line:#1e2a44;
+    --ink:#e6edf6; --mut:#8a9bb5; --dim:#5a6b85;
+    --acc:#4ade80; --acc2:#38bdf8; --warn:#fbbf24; --danger:#f87171; --violet:#a78bfa;
+    --mono:'SF Mono',ui-monospace,'Cascadia Code','Fira Code',Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:15px;
+    background-image:radial-gradient(circle at 15% 0%,rgba(56,189,248,.08),transparent 45%),radial-gradient(circle at 85% 5%,rgba(74,222,128,.07),transparent 40%);background-attachment:fixed}
+  a{color:var(--acc2);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code,pre{font-family:var(--mono)}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+
+  /* HEADER */
+  header{padding:54px 0 30px;border-bottom:1px solid var(--line)}
+  .kicker{color:var(--acc);font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase}
+  h1{font-size:34px;font-weight:800;margin:10px 0 6px;letter-spacing:-.02em;
+    background:linear-gradient(90deg,#e6edf6,#a78bfa 60%,#38bdf8);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .sub{color:var(--mut);font-size:16px;max-width:760px}
+  .meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+  .tag{font-family:var(--mono);font-size:11px;padding:4px 10px;border:1px solid var(--line);border-radius:20px;color:var(--mut);background:var(--panel)}
+  .tag b{color:var(--ink)}
+
+  /* LAYOUT */
+  section{padding:42px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:22px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+  h2 .n{font-family:var(--mono);font-size:13px;color:var(--dim);font-weight:400}
+  .lead{color:var(--mut);margin-bottom:24px;font-size:14px}
+
+  /* ARCH DIAGRAM */
+  .arch{display:grid;grid-template-columns:1fr;gap:14px}
+  .arch-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-items:stretch}
+  .node{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;position:relative}
+  .node .lbl{font-family:var(--mono);font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em}
+  .node .nm{font-weight:700;font-size:15px;margin:4px 0 6px}
+  .node .ds{font-size:12.5px;color:var(--mut)}
+  .node.browser{border-color:rgba(56,189,248,.4)}
+  .node.browser .nm{color:var(--acc2)}
+  .node.primary{border-color:rgba(74,222,128,.4)}
+  .node.primary .nm{color:var(--acc)}
+  .node.fallback{border-color:rgba(251,191,36,.4)}
+  .node.fallback .nm{color:var(--warn)}
+  .node.static{border-color:rgba(167,139,250,.4)}
+  .node.static .nm{color:var(--violet)}
+  .node.player{border-color:rgba(248,113,113,.4)}
+  .node.player .nm{color:var(--danger)}
+  .arrow{text-align:center;color:var(--dim);font-family:var(--mono);font-size:18px;padding:2px 0}
+  .arrow span{background:var(--bg);padding:0 10px;position:relative;top:-7px}
+
+  /* ROUTE TABLE */
+  .route-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+  .route{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;transition:border-color .15s}
+  .route:hover{border-color:var(--acc2)}
+  .route .rpath{font-family:var(--mono);font-size:13.5px;color:var(--acc2);word-break:break-all}
+  .route .rdesc{font-size:12.5px;color:var(--mut);margin-top:6px}
+
+  /* ENDPOINT CARD */
+  .ep{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin-bottom:18px;overflow:hidden}
+  .ep-head{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+  .method{font-family:var(--mono);font-size:11px;font-weight:700;padding:3px 9px;border-radius:5px;letter-spacing:.05em}
+  .m-get{background:rgba(74,222,128,.15);color:var(--acc);border:1px solid rgba(74,222,128,.3)}
+  .m-post{background:rgba(251,191,36,.15);color:var(--warn);border:1px solid rgba(251,191,36,.3)}
+  .ep-url{font-family:var(--mono);font-size:13px;color:var(--ink);word-break:break-all;flex:1;min-width:200px}
+  .ep-tag{font-family:var(--mono);font-size:10px;padding:2px 8px;border-radius:4px}
+  .t-prim{background:rgba(74,222,128,.12);color:var(--acc)}
+  .t-fall{background:rgba(251,191,36,.12);color:var(--warn)}
+  .t-only{background:rgba(167,139,250,.12);color:var(--violet)}
+  .t-be{background:rgba(248,113,113,.12);color:var(--danger)}
+  .ep-body{padding:16px 18px}
+  .ep-body h4{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin:14px 0 8px;font-weight:600}
+  .ep-body h4:first-child{margin-top:0}
+  pre{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow-x:auto;font-size:12.5px;line-height:1.5;color:#cdd7e5}
+  pre .k{color:var(--acc2)} pre .s{color:var(--acc)} pre .c{color:var(--dim)} pre .n{color:var(--warn)} pre .b{color:var(--violet)}
+  .params{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+  .param{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px}
+  .param .pn{font-family:var(--mono);color:var(--acc2)} .param .pt{color:var(--dim);font-size:11px}
+  .param .pd{color:var(--mut);margin-top:2px}
+  .note{font-size:12.5px;color:var(--warn);background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:8px 12px;margin-top:10px}
+  .note.ok{color:var(--acc);background:rgba(74,222,128,.06);border-color:rgba(74,222,128,.2)}
+
+  /* TOC */
+  .toc{position:sticky;top:0;z-index:10;background:rgba(10,14,26,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:10px 0}
+  .toc .wrap{display:flex;flex-wrap:wrap;gap:4px}
+  .toc a{font-size:12px;color:var(--mut);padding:4px 10px;border-radius:6px;font-family:var(--mono)}
+  .toc a:hover{background:var(--panel);color:var(--ink);text-decoration:none}
+  .toc a .n{color:var(--dim);margin-right:4px}
+
+  /* FLOW */
+  .flow{display:flex;flex-direction:column;gap:0}
+  .step{display:flex;gap:14px;align-items:flex-start;padding:14px 0;border-left:2px solid var(--line);margin-left:8px;padding-left:22px;position:relative}
+  .step:last-child{border-left-color:transparent}
+  .step::before{content:'';width:11px;height:11px;border-radius:50%;background:var(--acc2);position:absolute;left:-7px;top:18px;border:2px solid var(--bg)}
+  .step .sn{font-family:var(--mono);font-size:11px;color:var(--dim)}
+  .step .st{font-size:14px} .step .st b{color:var(--ink)}
+  .step .sd{font-size:12.5px;color:var(--mut);margin-top:3px}
+  .step code{font-size:12px;color:var(--acc2)}
+
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:760px){.two-col{grid-template-columns:1fr}}
+
+  .kv{display:grid;grid-template-columns:200px 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:12.5px}
+  .kv>div{background:var(--panel);padding:8px 12px}
+  .kv .k{color:var(--dim);font-family:var(--mono);font-size:11.5px}
+  .kv .v{color:var(--ink);font-family:var(--mono);word-break:break-all}
+  @media(max-width:560px){.kv{grid-template-columns:1fr}}
+
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:18px;font-size:12px;color:var(--mut)}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+  footer{padding:30px 0 60px;color:var(--dim);font-size:12px;text-align:center}
+  .pill{display:inline-block;font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:4px;background:var(--panel);border:1px solid var(--line);color:var(--mut)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="kicker">Reverse-Engineered API Map</div>
+    <h1>pw.modgalaxy.in — "AS Multiverse"</h1>
+    <p class="sub">A Physics Wallah (PW) content mirror built as a React SPA. This map documents every route, every API endpoint, the dual primary/fallback system, request/response data formats, the access-control flow, and the video-player pipeline — derived from the production JS bundle and live API probing.</p>
+    <div class="meta-row">
+      <span class="tag">Stack: <b>React + Vite SPA</b></span>
+      <span class="tag">Origin: <b>pw.modgalaxy.in</b></span>
+      <span class="tag">Bundle: <b>index-CBsgc31P.js</b></span>
+      <span class="tag">Title: <b>multiverse</b></span>
+      <span class="tag">CDN: <b>Cloudflare</b></span>
+    </div>
+  </div>
+</header>
+
+<nav class="toc"><div class="wrap">
+  <a href="#arch"><span class="n">01</span>Architecture</a>
+  <a href="#routes"><span class="n">02</span>App Routes</a>
+  <a href="#batches"><span class="n">03</span>Batches List</a>
+  <a href="#details"><span class="n">04</span>Batch Details + Subjects</a>
+  <a href="#topics"><span class="n">05</span>Topics</a>
+  <a href="#content"><span class="n">06</span>Content (Videos/Notes/DPP)</a>
+  <a href="#schedule"><span class="n">07</span>Schedule / Live Classes</a>
+  <a href="#backend"><span class="n">08</span>Backend Proxy Actions</a>
+  <a href="#player"><span class="n">09</span>Video Player Pipeline</a>
+  <a href="#access"><span class="n">10</span>Access Control / Verify</a>
+  <a href="#keys"><span class="n">11</span>Constants &amp; Storage</a>
+</div></nav>
+
+<!-- 01 ARCHITECTURE -->
+<section id="arch">
+  <div class="wrap">
+    <h2><span class="n">01</span>Architecture Overview</h2>
+    <p class="lead">The app uses a <b>dual-API strategy</b>. Every data request tries a <b style="color:var(--acc)">primary API</b> first (<code>/api/v2/*</code> served from the same origin). If it fails, it falls back to a <b style="color:var(--warn)">proxy backend</b> at <code>rolexcoderz.in/PWx</code> which forwards authenticated requests to the real PW servers. The batch catalog itself is served from a static GitHub Pages JSON file.</p>
+    <div class="legend">
+      <span><i style="background:rgba(56,189,248,.5)"></i>Client (Browser)</span>
+      <span><i style="background:rgba(74,222,128,.5)"></i>Primary API (same-origin)</span>
+      <span><i style="background:rgba(251,191,36,.5)"></i>Fallback Proxy (rolexcoderz.in)</span>
+      <span><i style="background:rgba(167,139,250,.5)"></i>Static Data (GitHub Pages)</span>
+      <span><i style="background:rgba(248,113,113,.5)"></i>Player / Shortener</span>
+    </div>
+    <div class="arch">
+      <div class="arch-row">
+        <div class="node browser"><div class="lbl">Client</div><div class="nm">React SPA</div><div class="ds">Vite build, React Router, localStorage token gating. Reads <code>/api/v2</code> first, falls back to proxy.</div></div>
+      </div>
+      <div class="arrow"><span>&#9660;</span></div>
+      <div class="arch-row">
+        <div class="node static"><div class="lbl">Static Catalog</div><div class="nm">rarestudy.github.io</div><div class="ds"><code>/rarestudy/batches.json?v=ts</code><br>GET — the list of all batches</div></div>
+        <div class="node primary"><div class="lbl">Primary API</div><div class="nm">pw.modgalaxy.in/api/v2</div><div class="ds">Same-origin REST. Batch details, subjects, topics, content. Returns <code>{success, data}</code>.</div></div>
+        <div class="node fallback"><div class="lbl">Fallback Proxy</div><div class="nm">rolexcoderz.in/PWx</div><div class="ds">POST with <code>?action=*</code>. Holds PW refresh_token, forwards to real PW API. Powers schedule, slides, tests, community, DPP.</div></div>
+      </div>
+      <div class="arrow"><span>&#9660;</span></div>
+      <div class="arch-row">
+        <div class="node player"><div class="lbl">Player</div><div class="nm">vidcloud.eu.org</div><div class="ds"><code>/play.php?...</code> — embeds the lecture stream</div></div>
+        <div class="node player"><div class="lbl">URL Shortener</div><div class="nm">vplink.in/api</div><div class="ds">Shortens verify-code URLs for Telegram sharing</div></div>
+        <div class="node static"><div class="lbl">Media CDN</div><div class="nm">static.pw.live</div><div class="ds">All batch/subject/teacher images &amp; PDFs</div></div>
+      </div>
+    </div>
+    <div class="note" style="margin-top:16px"><b>The <code>gi(url, fallback)</code> resolver:</b> tries <code>fetch(url)</code> → if not OK or <code>success===false</code> → runs <code>fallback()</code>. When the primary URL is passed as <code>null</code> (e.g. schedule details), the proxy is used <b>directly</b>.</div>
+  </div>
+</section>
+
+<!-- 02 ROUTES -->
+<section id="routes">
+  <div class="wrap">
+    <h2><span class="n">02</span>Application Routes (React Router)</h2>
+    <p class="lead">Six routes drive the entire SPA. Route params (<code>:batchId</code>, <code>:subjectId</code>, <code>:topicId</code>, <code>:lectureId</code>) map directly to API arguments.</p>
+    <div class="route-grid">
+      <div class="route"><div class="rpath">/</div><div class="rdesc">Home — batch catalog. Loads <code>batches.json</code> and renders the grid of batch cards.</div></div>
+      <div class="route"><div class="rpath">/batches/:batchId</div><div class="rdesc">Batch detail page. Tabs: <b>Subjects</b> &amp; <b>Live Classes</b>. Calls batch-details API; subjects list rendered as cards.</div></div>
+      <div class="route"><div class="rpath">/batches/:batchId/subject/:subjectId/topics</div><div class="rdesc">Subject topics list. Each topic shows video / notes / exercise counts.</div></div>
+      <div class="route"><div class="rpath">/batches/:batchId/subject/:subjectId/topic/:topicId/content</div><div class="rdesc">Topic content. Sub-tabs: <b>Videos</b>, <b>Notes</b>, <b>DPPs</b>. Paginated content list.</div></div>
+      <div class="route"><div class="rpath">/player/:batchId/:subjectId/:topicId/:lectureId</div><div class="rdesc">Video player. Loads content list + schedule details, builds a vidcloud player URL. <code>:lectureId</code> = schedule_id.</div></div>
+      <div class="route"><div class="rpath">/verify</div><div class="rdesc">Access verification. Code generation + 24-hour token activation.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 03 BATCHES -->
+<section id="batches">
+  <div class="wrap">
+    <h2><span class="n">03</span>Batches List</h2>
+    <p class="lead">The full batch catalog is a static JSON file on GitHub Pages, fetched with a cache-busting timestamp. This is the <b>only</b> data source for the home page.</p>
+    <div class="ep">
+      <div class="ep-head"><span class="method m-get">GET</span><span class="ep-url">https://rarestudy.github.io/rarestudy/batches.json?v={Date.now()}</span><span class="ep-tag t-only">Static · Primary</span></div>
+      <div class="ep-body">
+        <h4>Response Shape</h4>
+<pre><span class="k">{</span>
+  <span class="s">"success"</span>: <span class="b">true</span>,
+  <span class="s">"batches"</span>: [
+    {
+      <span class="s">"_id"</span>: <span class="s">"698ad3519549b300a5e1cc6a"</span>,   <span class="c">// → batchId for all other APIs</span>
+      <span class="s">"name"</span>: <span class="s">"Arjuna JEE 2027"</span>,
+      <span class="s">"byName"</span>: <span class="s">"For IIT-JEE Aspirants"</span>,
+      <span class="s">"startDate"</span>: <span class="s">"13 Apr 2026"</span>,
+      <span class="s">"endDate"</span>: <span class="s">"01 Jul 2028"</span>,
+      <span class="s">"language"</span>: <span class="s">"Hinglish"</span>,
+      <span class="s">"previewImage"</span>: <span class="s">"https://static.pw.live/..."</span>,
+      <span class="s">"feeTotal"</span>: <span class="n">3999</span>,
+      <span class="s">"type"</span>: <span class="s">"E_BATCH"</span>,            <span class="c">// or "REGULAR"</span>
+      <span class="s">"slug"</span>: <span class="s">"arjuna-jee-2027-243495"</span>,
+      <span class="s">"subBatches"</span>: []
+    }
+  ]
+}</pre>
+        <div class="note ok">The <code>_id</code> field here is the <code>batch_id</code> used by every downstream API call.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 04 BATCH DETAILS + SUBJECTS -->
+<section id="details">
+  <div class="wrap">
+    <h2><span class="n">04</span>Batch Details &amp; Subjects</h2>
+    <p class="lead">Returns the full batch object <b>plus a <code>subjects[]</code> array</b>. Each subject contains teacher info, image, lecture count, tags, and a <code>subjectId</code> used for topics/content.</p>
+    <div class="ep">
+      <div class="ep-head"><span class="method m-get">GET</span><span class="ep-url">/api/v2/batches/{batchId}/details</span><span class="ep-tag t-prim">Primary</span></div>
+      <div class="ep-body">
+        <h4>Path Params</h4>
+        <div class="params">
+          <div class="param"><span class="pn">batchId</span> <span class="pt">string</span><div class="pd">The batch <code>_id</code> from batches.json</div></div>
+        </div>
+        <h4>Response — top-level batch fields (selected)</h4>
+<pre><span class="k">{</span> <span class="s">"success"</span>: <span class="b">true</span>, <span class="s">"data"</span>: {
+  <span class="s">"_id"</span>, <span class="s">"name"</span>, <span class="s">"batchCode"</span>, <span class="s">"byName"</span>, <span class="s">"description"</span>(HTML),
+  <span class="s">"exam"</span>: [<span class="s">"IIT-JEE"</span>],  <span class="s">"class"</span>: <span class="s">"11"</span>,  <span class="s">"language"</span>: <span class="s">"Hinglish"</span>,
+  <span class="s">"startDate"</span>, <span class="s">"endDate"</span>, <span class="s">"type"</span>: <span class="s">"E_BATCH"</span>, <span class="s">"status"</span>: <span class="s">"Active"</span>,
+  <span class="s">"feeTotal"</span>, <span class="s">"discountValue"</span>, <span class="s">"config"</span>:{...}, <span class="s">"testCats"</span>:[...],
+  <span class="s">"subjects"</span>: [ <span class="c">/* see below */</span> ]
+}}</pre>
+        <h4>Each subject object</h4>
+<pre>{
+  <span class="s">"_id"</span>: <span class="s">"69b5698ee506a608ee297ed1"</span>,          <span class="c">// → subjectId for topics/content routes</span>
+  <span class="s">"subject"</span>: <span class="s">"Physics By Rajwant Singh Sir"</span>,   <span class="c">// display name</span>
+  <span class="s">"subjectId"</span>: <span class="s">"688ddb35f8357d2e5d75a168"</span>,      <span class="c">// PW internal subject id</span>
+  <span class="s">"slug"</span>: <span class="s">"physics-by-rajwant-singh-sir-964222"</span>,<span class="c">// used by proxy get_topics</span>
+  <span class="s">"description"</span>, <span class="s">"lectureCount"</span>: <span class="n">79</span>, <span class="s">"tagCount"</span>: <span class="n">22</span>,
+  <span class="s">"displayOrder"</span>: <span class="n">1</span>, <span class="s">"isResources"</span>: <span class="b">false</span>,
+  <span class="s">"teacherIds"</span>: [{
+    <span class="s">"_id"</span>, <span class="s">"firstName"</span>, <span class="s">"lastName"</span>, <span class="s">"imageId"</span>:{...},
+    <span class="s">"experience"</span>, <span class="s">"qualification"</span>, <span class="s">"featuredLine"</span>, <span class="s">"subject"</span>
+  }],
+  <span class="s">"imageId"</span>: { <span class="s">"baseUrl"</span>, <span class="s">"key"</span> },       <span class="c">// subject thumbnail</span>
+  <span class="s">"fileId"</span>:  { <span class="s">"baseUrl"</span>, <span class="s">"key"</span> },       <span class="c">// subject PDF (notes/plan)</span>
+  <span class="s">"schedules"</span>: [], <span class="s">"substituteTeacherIds"</span>: []
+}</pre>
+        <div class="note">The frontend fallback for batch details calls <code>POST rolexcoderz.in/PWx/?action=get_batch_details</code> body <code>{batch_id}</code> — but the live proxy currently returns <b>"Unknown action"</b> for this endpoint, so the <b>primary API is required</b> here.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 05 TOPICS -->
+<section id="topics">
+  <div class="wrap">
+    <h2><span class="n">05</span>Topics (Chapters / Tags)</h2>
+    <p class="lead">Each subject is broken into topics (also called "tags" or "chapters"). The topic <code>_id</code> becomes the <code>tag</code> / <code>tag_id</code> for content queries.</p>
+    <div class="two-col">
+    <div class="ep">
+      <div class="ep-head"><span class="method m-get">GET</span><span class="ep-url">/api/v2/batches/{batchId}/subject/{subjectId}/topics</span><span class="ep-tag t-prim">Primary</span></div>
+      <div class="ep-body">
+        <h4>Response</h4>
+<pre><span class="k">{</span><span class="s">"success"</span>:<span class="b">true</span>,<span class="s">"data"</span>:[
+ { <span class="s">"_id"</span>:<span class="s">"69ce8611..."</span>,
+   <span class="s">"name"</span>:<span class="s">"Bridge Course Lecture"</span>,
+   <span class="s">"type"</span>:<span class="s">"BATCH_SCHEDULE_VIDEO"</span>,
+   <span class="s">"typeId"</span>:<span class="s">"{subjectId}"</span>,
+   <span class="s">"videos"</span>:<span class="n">1</span>, <span class="s">"notes"</span>:<span class="n">1</span>,
+   <span class="s">"exercises"</span>:<span class="n">0</span>, <span class="s">"lectureVideos"</span>:<span class="n">0</span>,
+   <span class="s">"displayOrder"</span>:<span class="n">5</span>,
+   <span class="s">"slug"</span>:<span class="s">"bridge-course-lecture..."</span> }
+]}</pre>
+        <div class="note">No fallback in the JS — if the primary fails, topics can't load. (The proxy does expose <code>get_topics</code> though — see right.)</div>
+      </div>
+    </div>
+    <div class="ep">
+      <div class="ep-head"><span class="method m-post">POST</span><span class="ep-url">rolexcoderz.in/PWx/?action=get_topics</span><span class="ep-tag t-fall">Proxy</span></div>
+      <div class="ep-body">
+        <h4>Body</h4>
+<pre><span class="k">{</span>
+  <span class="s">"batch_id"</span>: <span class="s">"698ad3519549b300a5e1cc6a"</span>,
+  <span class="s">"subject_slug"</span>: <span class="s">"physics-by-rajwant-singh-sir-964222"</span>
+}</pre>
+        <div class="note ok">Note: the proxy uses <code>subject_slug</code> (not <code>subject_id</code>). Response is double-nested: <code>{success, data:{success, data:[...]}}</code>.</div>
+      </div>
+    </div>
+    </div>
+  </div>
+</section>
+
+<!-- 06 CONTENT -->
+<section id="content">
+  <div class="wrap">
+    <h2><span class="n">06</span>Content — Videos / Notes / DPPs</h2>
+    <p class="lead">The core content loader. The <code>contentType</code> query param selects the material type. The frontend maps UI tab names to internal codes.</p>
+    <div class="ep">
+      <div class="ep-head"><span class="method m-get">GET</span><span class="ep-url">/api/v2/batches/{batchId}/subject/{subjectId}/content?page={n}&amp;contentType={type}&amp;tag={tagId}</span><span class="ep-tag t-prim">Primary</span></div>
+      <div class="ep-body">
+        <h4>contentType mapping (UI tab → API value)</h4>
+        <div class="kv">
+          <div class="k">Videos</div><div class="v">LECTURES</div>
+          <div class="k">Notes</div><div class="v">notes</div>
+          <div class="k">DPPs</div><div class="v">DppNotes</div>
+        </div>
+        <h4>Query Params</h4>
+        <div class="params">
+          <div class="param"><span class="pn">batchId</span> <span class="pt">path</span><div class="pd">Batch <code>_id</code></div></div>
+          <div class="param"><span class="pn">subjectId</span> <span class="pt">path</span><div class="pd">Subject <code>_id</code></div></div>
+          <div class="param"><span class="pn">contentType</span> <span class="pt">string</span><div class="pd">LECTURES | notes | DppNotes</div></div>
+          <div class="param"><span class="pn">tag</span> <span class="pt">string</span><div class="pd">Topic <code>_id</code></div></div>
+          <div class="param"><span class="pn">page</span> <span class="pt">int</span><div class="pd">Page number (1-based)</div></div>
+        </div>
+        <h4>Response — Video lecture item (contentType=LECTURES)</h4>
+<pre><span class="k">{</span><span class="s">"success"</span>:<span class="b">true</span>, <span class="s">"data"</span>:[{
+  <span class="s">"_id"</span>: <span class="s">"69ce879a58a0411e9cf01972"</span>,       <span class="c">// → lectureId / schedule_id</span>
+  <span class="s">"topic"</span>: <span class="s">"Bridge Course : Basic Physics..."</span>,
+  <span class="s">"date"</span>: <span class="s">"2026-04-02T00:00:00.000Z"</span>,
+  <span class="s">"startTime"</span>, <span class="s">"endTime"</span>,
+  <span class="s">"lectureType"</span>: <span class="s">"RECORDED"</span>,             <span class="c">// or LIVE</span>
+  <span class="s">"urlType"</span>: <span class="s">"youtube"</span>,                 <span class="c">// or awsVideo (encrypted)</span>
+  <span class="s">"url"</span>: <span class="s">"https://www.youtube.com/embed/5sA9uo8qtUs"</span>,
+  <span class="s">"videoDetails"</span>: { <span class="s">"name"</span>, <span class="s">"image"</span>, <span class="s">"embedCode"</span>,
+    <span class="s">"description"</span>, <span class="s">"duration"</span>: <span class="s">"3:16:05"</span>, <span class="s">"publishedAt"</span> },
+  <span class="s">"tags"</span>: [{ <span class="s">"_id"</span>, <span class="s">"name"</span> }],
+  <span class="s">"teachers"</span>: [<span class="s">"{teacherId}"</span>],
+  <span class="s">"isFree"</span>, <span class="s">"isLocked"</span>, <span class="s">"isVideoLecture"</span>, <span class="s">"hasAttachment"</span>
+}], <span class="s">"paginate"</span>: { <span class="s">"limit"</span>:<span class="n">1</span>, <span class="s">"totalCount"</span>:<span class="n">1</span> }}</pre>
+      </div>
+    </div>
+    <div class="ep">
+      <div class="ep-head"><span class="method m-post">POST</span><span class="ep-url">rolexcoderz.in/PWx/?action=get_contents</span><span class="ep-tag t-fall">Fallback Proxy</span></div>
+      <div class="ep-body">
+        <h4>Body</h4>
+<pre><span class="k">{</span>
+  <span class="s">"batch_id"</span>: <span class="s">"698ad3519549b300a5e1cc6a"</span>,
+  <span class="s">"subject_id"</span>: <span class="s">"69b5698ee506a608ee297ed1"</span>,
+  <span class="s">"content_type"</span>: <span class="s">"LECTURES"</span>,   <span class="c">// "LECTURES" | "notes" | "DppNotes"</span>
+  <span class="s">"tag_id"</span>: <span class="s">"69ce8611e6bfb514a81a787e"</span>,
+  <span class="s">"limit"</span>: <span class="n">50</span>
+}</pre>
+        <div class="note">Proxy response wraps PW format: <code>{success, data:{success, data:[{type:"LECTURE", _id, data:{...lecture...}}]}}</code>. Each item has a <code>type</code> field ("LECTURE") and a nested <code>data</code> object with the same lecture shape plus <code>homeworkIds</code> (notes/PDFs with <code>attachmentIds</code>).</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 07 SCHEDULE -->
+<section id="schedule">
+  <div class="wrap">
+    <h2><span class="n">07</span>Schedule Details &amp; Live Classes</h2>
+    <p class="lead">Schedule details are fetched <b>only from the proxy</b> (primary URL is <code>null</code>). The <code>:lectureId</code> route param doubles as the <code>schedule_id</code>. The proxy also exposes a <code>today_schedule</code> action for live-class timetables.</p>
+    <div class="two-col">
+    <div class="ep">
+      <div class="ep-head"><span class="method m-post">POST</span><span class="ep-url">rolexcoderz.in/PWx/?action=get_schedule_details</span><span class="ep-tag t-fall">Proxy only</span></div>
+      <div class="ep-body">
+        <h4>Body</h4>
+<pre><span class="k">{</span>
+  <span class="s">"batch_id"</span>: <span class="s">"698ad3519549b300a5e1cc6a"</span>,
+  <span class="s">"subject_id"</span>: <span class="s">"69b5698ee506a608ee297ed1"</span>,
+  <span class="s">"schedule_id"</span>: <span class="s">"6a63a7ecbf3d48b8d39137be"</span>
+}</pre>
+        <h4>Response (selected keys)</h4>
+<pre>{ <span class="s">"_id"</span>, <span class="s">"topic"</span>, <span class="s">"date"</span>, <span class="s">"day"</span>:<span class="s">"SAT"</span>,
+  <span class="s">"startTime"</span>, <span class="s">"endTime"</span>,
+  <span class="s">"urlType"</span>:<span class="s">"awsVideo"</span>, <span class="s">"url"</span>:<span class="s">""</span>,
+  <span class="s">"exerciseIds"</span>:[{...DPP quizzes...}],
+  <span class="s">"homeworkIds"</span>:[], <span class="s">"tags"</span>:[{<span class="s">"_id"</span>,<span class="s">"name"</span>}],
+  <span class="s">"isDrmEnabled"</span>, <span class="s">"isChatEnabled"</span>,
+  <span class="s">"isDoubtEnabled"</span>, <span class="s">"classActiveTime"</span>... }</pre>
+      </div>
+    </div>
+    <div class="ep">
+      <div class="ep-head"><span class="method m-post">POST</span><span class="ep-url">rolexcoderz.in/PWx/?action=today_schedule</span><span class="ep-tag t-be">Backend</span></div>
+      <div class="ep-body">
+        <h4>Body</h4>
+<pre><span class="k">{</span> <span class="s">"batch_id"</span>: <span class="s">"698ad3519549b300a5e1cc6a"</span> }</pre>
+        <h4>Response — array of today's live classes</h4>
+<pre>[{
+  <span class="s">"_id"</span>: <span class="s">"6a63a7ec..."</span>,          <span class="c">// schedule_id</span>
+  <span class="s">"batchSubjectId"</span>: <span class="s">"69b572f6..."</span>,
+  <span class="s">"date"</span>: <span class="s">"2026-07-25T00:00:00.000Z"</span>,
+  <span class="s">"startTime"</span>: <span class="s">"2026-07-25T13:00:00.000Z"</span>,
+  <span class="s">"endTime"</span>: <span class="s">"2026-07-25T16:00:00.000Z"</span>,
+  <span class="s">"urlType"</span>: <span class="s">"awsVideo"</span>,
+  <span class="s">"exerciseIds"</span>:[{<span class="s">"_id"</span>,<span class="s">"slug"</span>,<span class="s">"title"</span>}],
+  <span class="s">"tags"</span>:[{<span class="s">"_id"</span>,<span class="s">"name"</span>:<span class="s">"Laws of Motion + Friction"</span>}]
+}]</pre>
+        <div class="note ok">Not currently wired into the frontend's "Live Classes" tab (which is a placeholder), but the data is fully available.</div>
+      </div>
+    </div>
+    </div>
+  </div>
+</section>
+
+<!-- 08 BACKEND ACTIONS -->
+<section id="backend">
+  <div class="wrap">
+    <h2><span class="n">08</span>Backend Proxy — All Actions</h2>
+    <p class="lead">The proxy at <code>rolexcoderz.in/PWx</code> is a full PW API gateway. All are <b>POST</b> with JSON body and a <code>?action=</code> query param. Below is the complete action catalog discovered from the server's own response.</p>
+    <div class="kv" style="grid-template-columns:220px 130px 1fr">
+      <div class="k">Action</div><div class="k">Required body fields</div><div class="k">Purpose</div>
+      <div class="v">get_contents</div><div class="v">batch_id, subject_id, content_type, tag_id, limit</div><div class="v">Lecture/notes/DPP content list (frontend fallback)</div>
+      <div class="v">get_topics</div><div class="v">batch_id, subject_slug</div><div class="v">Subject topic/chapter list</div>
+      <div class="v">get_schedule_details</div><div class="v">batch_id, subject_id, schedule_id</div><div class="v">Full schedule/lecture detail (frontend, proxy-only)</div>
+      <div class="v">today_schedule</div><div class="v">batch_id</div><div class="v">Today's live class timetable</div>
+      <div class="v">get_slides</div><div class="v">batch_id, subject_id, schedule_id</div><div class="v">Lecture slides/whiteboard content</div>
+      <div class="v">get_dpp</div><div class="v">batch_id, subject_id, chapter_id</div><div class="v">Daily Practice Problems for a chapter</div>
+      <div class="v">get_tests</div><div class="v">batch_id</div><div class="v">Test series list (mock + regular)</div>
+      <div class="v">get_test_filters</div><div class="v">batch_id</div><div class="v">Test filter options (attempt status, categories)</div>
+      <div class="v">get_test_instructions</div><div class="v">batch_id, test_id</div><div class="v">General instructions for a specific test</div>
+      <div class="v">get_community_channels</div><div class="v">batch_id</div><div class="v">Community discussion channels (forum + feed)</div>
+      <div class="v">get_community_posts</div><div class="v">channel_id</div><div class="v">Posts within a community channel</div>
+      <div class="v">set_credentials</div><div class="v">refresh_token</div><div class="v">Store PW auth refresh token on the proxy</div>
+      <div class="v">force_refresh</div><div class="v">refresh_token, client_secret (config)</div><div class="v">Force-refresh the PW access token</div>
+    </div>
+    <div class="note" style="margin-top:14px"><b>Test item shape</b> (from <code>get_tests</code>): <code>{_id, type:"MockAndRegular", currentType:"Mock", name, slug, totalQuestions:75, totalMarks:300, startTime, maxDuration:180, availableFor:["WEB","MOBILE"], isSubjective:false}</code></div>
+  </div>
+</section>
+
+<!-- 09 PLAYER -->
+<section id="player">
+  <div class="wrap">
+    <h2><span class="n">09</span>Video Player Pipeline</h2>
+    <p class="lead">The player route loads the content list + schedule, finds the matching lecture, then constructs a <code>vidcloud.eu.org</code> player URL. VPLink is used only to shorten verify-URLs for Telegram sharing.</p>
+    <div class="ep">
+      <div class="ep-head"><span class="method m-get">GET</span><span class="ep-url">https://vidcloud.eu.org/play.php?{URLSearchParams}</span><span class="ep-tag t-be">Player</span></div>
+      <div class="ep-body">
+        <h4>Query params built by the frontend</h4>
+<pre>https://vidcloud.eu.org/play.php?<span class="c">?</span>
+  batch_id   = <span class="s">{batchId}</span>
+  subject_id = <span class="s">{subjectId}</span>
+  topic_id   = <span class="s">""</span>                          <span class="c">// always empty</span>
+  video_id   = <span class="s">{lecture._id || schedule._id || url}</span>
+  video_url  = <span class="s">""</span>                          <span class="c">// always empty</span>
+  video_name = <span class="s">{lecture.topic || schedule.name}</span>
+  video_img  = <span class="s">{videoDetails.image || fallback}</span>
+  video_type = <span class="s">"new"</span>
+  play_type  = <span class="s">"Lecture"</span></pre>
+      </div>
+    </div>
+    <div class="ep">
+      <div class="ep-head"><span class="method m-get">GET</span><span class="ep-url">https://vplink.in/api?api={key}&amp;url={encoded}</span><span class="ep-tag t-be">Shortener</span></div>
+      <div class="ep-body">
+        <h4>Usage</h4>
+<pre>fetch(<span class="s">`https://vplink.in/api?api=${_g}&amp;url=${encodeURIComponent(url)}`</span>)
+  → { <span class="s">"status"</span>: <span class="s">"success"</span>, <span class="s">"shortenedUrl"</span>: <span class="s">"https://vplink.in/xxxxx"</span> }</pre>
+        <div class="note">API key <code>_g</code> is hardcoded in the bundle — see Constants. Used <b>only</b> to shorten the verify redirect URL before sending users to Telegram.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 10 ACCESS -->
+<section id="access">
+  <div class="wrap">
+    <h2><span class="n">10</span>Access Control &amp; Verify Flow</h2>
+    <p class="lead">A lightweight 24-hour gate. Users generate a code, share it via Telegram, then activate. A token is stored in localStorage and checked on every protected route. The whole mechanism is client-side (XOR + base64) — not cryptographically secure.</p>
+    <div class="flow">
+      <div class="step"><div><div class="sn">STEP 1</div><div class="st"><b>Generate code</b> — <code>PEEDA-XXXXXX</code></div><div class="sd">6 random chars from <code>ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789</code>, prefixed with <code>PEEDA-</code>. Stored in localStorage as <code>asm_pending_auth_code</code>.</div></div></div>
+      <div class="step"><div><div class="sn">STEP 2</div><div class="st"><b>Build verify URL</b> — <code>/verify?code=PEEDA-XXXXXX&amp;redirect=...</code></div><div class="sd">Shortened via VPLink, then user is sent to Telegram channel <code>t.me/asmultiversein</code>.</div></div></div>
+      <div class="step"><div><div class="sn">STEP 3</div><div class="st"><b>Enter code</b> on <code>/verify</code></div><div class="sd">Validated against (a) a hardcoded list <code>Zg</code>, or (b) the locally-generated <code>asm_pending_auth_code</code>.</div></div></div>
+      <div class="step"><div><div class="sn">STEP 4</div><div class="st"><b>Activate 24h token</b> — <code>Hg()</code></div><div class="sd">Token = <code>btoa(XOR(Date.now(), "as-multiverse-24h-token-secret"))</code> → base64url. Stored as <code>asm_access_token</code>; expiry <code>asm_token_expiry = now + 86400000</code>.</div></div></div>
+      <div class="step"><div><div class="sn">STEP 5</div><div class="st"><b>Gate check</b> — <code>vn()</code> on protected routes</div><div class="sd">If no valid token, redirect to <code>/verify?redirect={currentPath}</code>. Player route guards this in <code>useEffect</code>.</div></div></div>
+    </div>
+    <div class="ep" style="margin-top:18px">
+      <div class="ep-head"><span class="ep-tag t-be">Hardcoded valid codes</span></div>
+      <div class="ep-body">
+<pre>Zg = [<span class="s">"ADMIN2026"</span>, <span class="s">"VIPPASS"</span>, <span class="s">"LO-IS-KING"</span>, <span class="s">"GODMODE"</span>, <span class="s">"ASMFREE2026"</span>]</pre>
+        <div class="note ok">Entering any of these codes (case-insensitive, uppercased) instantly grants 24h access — no Telegram needed.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 11 KEYS -->
+<section id="keys">
+  <div class="wrap">
+    <h2><span class="n">11</span>Constants, Variables &amp; Storage</h2>
+    <p class="lead">All key constants extracted from the minified bundle.</p>
+    <div class="kv">
+      <div class="k">vs (proxy base)</div><div class="v">https://rolexcoderz.in/PWx</div>
+      <div class="k">ys (primary base)</div><div class="v">/api/v2</div>
+      <div class="k">jg (batches JSON)</div><div class="v">https://rarestudy.github.io/rarestudy/batches.json</div>
+      <div class="k">_g (vplink API key)</div><div class="v">bb0082e0ede156f2a39bf274f943aa567155b660</div>
+      <div class="k">to (XOR secret)</div><div class="v">as-multiverse-24h-token-secret</div>
+      <div class="k">Og (token TTL)</div><div class="v">86400000 (24h)</div>
+      <div class="k">Dm (token key)</div><div class="v">asm_access_token (localStorage)</div>
+      <div class="k">Mm (expiry key)</div><div class="v">asm_token_expiry (localStorage)</div>
+      <div class="k">uc (pending code)</div><div class="v">asm_pending_auth_code (localStorage)</div>
+      <div class="k">favorites</div><div class="v">asm_favorites (localStorage, JSON array of IDs)</div>
+      <div class="k">community modal</div><div class="v">asm_community_modal_shown (sessionStorage)</div>
+      <div class="k">fallback image</div><div class="v">https://i.ibb.co/N2z9f44g/Chat-GPT-Image-Jun-13-2026-06-37-52-PM.png</div>
+      <div class="k">default teacher img</div><div class="v">https://static.pw.live/.../a8a8837e-...png</div>
+      <div class="k">Telegram channel</div><div class="v">https://t.me/asmultiversein</div>
+      <div class="k">WhatsApp channel</div><div class="v">https://whatsapp.com/channel/0029Vb8Oj9j1noz43KsErK01</div>
+    </div>
+    <div class="two-col" style="margin-top:18px">
+      <div class="ep">
+        <div class="ep-head"><span class="ep-tag t-prim">Frontend async functions</span></div>
+        <div class="ep-body">
+          <div class="kv">
+            <div class="k">Ng()</div><div class="v">Fetch batches.json</div>
+            <div class="k">Cg(batchId)</div><div class="v">Batch details (primary + fallback)</div>
+            <div class="k">Rg(batchId, subjectId)</div><div class="v">Topics (primary only)</div>
+            <div class="k">Rm(b, s, tag, type, page)</div><div class="v">Content (primary + fallback)</div>
+            <div class="k">Dg(b, s, scheduleId)</div><div class="v">Schedule details (proxy only)</div>
+            <div class="k">gi(url, fallback)</div><div class="v">Primary→fallback resolver</div>
+            <div class="k">Mg(url)</div><div class="v">VPLink URL shortener</div>
+            <div class="k">vn()</div><div class="v">Token validity check</div>
+            <div class="k">Hg()</div><div class="v">Issue 24h token</div>
+            <div class="k">Ug(str)</div><div class="v">XOR+base64url encode</div>
+          </div>
+        </div>
+      </div>
+      <div class="ep">
+        <div class="ep-head"><span class="ep-tag t-fall">Data flow summary</span></div>
+        <div class="ep-body" style="font-size:13px;color:var(--mut);line-height:1.7">
+          <b style="color:var(--ink)">batches.json</b> → batch <code>_id</code><br>
+          ↓ <b style="color:var(--acc)">/api/v2/batches/:id/details</b><br>
+          → <b>subjects[]</b> → subject <code>_id</code> &amp; <code>slug</code><br>
+          ↓ <b style="color:var(--acc)">/api/v2/.../topics</b><br>
+          → <b>topics[]</b> → topic <code>_id</code> (tag)<br>
+          ↓ <b style="color:var(--acc)">/api/v2/.../content?tag=</b><br>
+          → <b>lectures[]</b> → lecture <code>_id</code><br>
+          ↓ <b style="color:var(--warn)">get_schedule_details</b> + <b>vidcloud</b><br>
+          → <b>video player</b>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>Derived from production bundle <code>index-CBsgc31P.js</code> (268 KB) + live API probing on 2026-07-25.</p>
+    <p style="margin-top:4px">This is an unofficial reverse-engineering analysis for educational purposes. All data originates from Physics Wallah (PW) servers proxied through rolexcoderz.in.</p>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<title>DeltaStudy.site — API & Data Format Analysis</title>
+<style>
+  :root{
+    --bg:#0d1117; --surface:#161b22; --surface2:#1c2331; --border:#30363d;
+    --text:#e6edf3; --muted:#8b949e; --accent:#5a4bda; --accent2:#7c83fd;
+    --green:#3fb950; --red:#f85149; --orange:#d29922; --blue:#58a6ff; --cyan:#39d0d8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.55;font-size:14px}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px 80px}
+  /* Hero */
+  .hero{background:linear-gradient(135deg,#1a1f3a 0%,#0d1117 60%);border-bottom:1px solid var(--border);padding:40px 20px 36px}
+  .hero-inner{max-width:1180px;margin:0 auto}
+  .hero h1{font-size:30px;font-weight:800;letter-spacing:-.5px;background:linear-gradient(90deg,var(--accent2),var(--cyan));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+  .hero .sub{color:var(--muted);font-size:15px;max-width:760px}
+  .hero .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+  .chip{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:4px 14px;font-size:12px;color:var(--muted)}
+  .chip b{color:var(--accent2)}
+  /* Sections */
+  h2{font-size:20px;font-weight:700;margin:48px 0 16px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+  h2 .num{background:var(--accent);color:#fff;border-radius:6px;font-size:13px;padding:2px 10px;font-weight:700}
+  h3{font-size:16px;font-weight:600;margin:28px 0 12px;color:var(--accent2)}
+  p{margin:8px 0;color:var(--muted)}
+  p b,li b,td b{color:var(--text)}
+  code,.mono{font-family:'SF Mono',Consolas,'Courier New',monospace;font-size:12.5px}
+  /* Cards */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;margin:16px 0}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;overflow:hidden}
+  .card .ttl{font-weight:700;font-size:14px;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+  .card .ttl .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+  .card p{font-size:13px;margin:4px 0}
+  /* API endpoint table */
+  .ep{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin:14px 0;overflow:hidden}
+  .ep-hdr{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface2)}
+  .method{font-size:11px;font-weight:800;padding:3px 9px;border-radius:5px;letter-spacing:.5px;white-space:nowrap}
+  .m-get{background:rgba(63,185,80,.15);color:var(--green);border:1px solid rgba(63,185,80,.3)}
+  .m-post{background:rgba(88,166,255,.15);color:var(--blue);border:1px solid rgba(88,166,255,.3)}
+  .ep-url{font-family:'SF Mono',Consolas,monospace;font-size:12px;color:var(--cyan);word-break:break-all;flex:1}
+  .ep-body{padding:14px 16px}
+  .ep-body p{margin:6px 0}
+  .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:4px;margin:2px 4px 2px 0;background:var(--surface2);border:1px solid var(--border);color:var(--muted)}
+  .tag.enc{border-color:rgba(210,153,34,.4);color:var(--orange)}
+  .tag.auth{border-color:rgba(248,81,73,.3);color:var(--red)}
+  /* Code block */
+  pre{background:#010409;border:1px solid var(--border);border-radius:8px;padding:14px 16px;overflow-x:auto;font-family:'SF Mono',Consolas,monospace;font-size:12px;line-height:1.6;color:#c9d1d9;margin:12px 0}
+  pre .k{color:#ff7b72} pre .s{color:#a5d6ff} pre .c{color:#8b949e} pre .n{color:#79c0ff} pre .p{color:#d2a8ff}
+  /* JSON tree */
+  .json{background:#010409;border:1px solid var(--border);border-radius:8px;padding:14px 16px;overflow-x:auto;font-family:'SF Mono',Consolas,monospace;font-size:12px;line-height:1.6;margin:12px 0}
+  .json .key{color:#7ee787} .json .str{color:#a5d6ff} .json .num{color:#f0883e} .json .bool{color:#d2a8ff} .json .arr{color:var(--muted)}
+  /* Route table */
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{background:var(--surface2);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+  td code{font-size:12px;color:var(--cyan)}
+  tr:hover{background:var(--surface)}
+  /* Flow diagram */
+  .flow{display:flex;flex-direction:column;gap:0;margin:20px 0}
+  .flow-row{display:flex;align-items:stretch;gap:0}
+  .flow-node{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;flex:1;min-width:0}
+  .flow-node .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  .flow-node .val{font-size:13px;font-weight:600;margin-top:2px;word-break:break-all}
+  .flow-arrow{display:flex;align-items:center;justify-content:center;padding:0 8px;color:var(--accent2);font-size:20px;font-weight:700;flex-shrink:0}
+  @media(max-width:780px){.flow-row{flex-direction:column}.flow-arrow{transform:rotate(90deg);padding:4px 0}}
+  /* Callout */
+  .callout{background:rgba(210,153,34,.08);border:1px solid rgba(210,153,34,.3);border-radius:10px;padding:14px 16px;margin:16px 0}
+  .callout.blue{background:rgba(88,166,255,.08);border-color:rgba(88,166,255,.3)}
+  .callout.red{background:rgba(248,81,73,.08);border-color:rgba(248,81,73,.3)}
+  .callout .ttl{font-weight:700;margin-bottom:6px;font-size:14px}
+  .callout p{color:var(--text);font-size:13px;margin:4px 0}
+  /* ToC */
+  .toc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin:20px 0}
+  .toc ol{margin:0;padding-left:22px}
+  .toc li{margin:5px 0}
+  .toc a{color:var(--accent2);text-decoration:none;font-size:13px}
+  .toc a:hover{text-decoration:underline}
+  .hl{color:var(--accent2);font-weight:600}
+  .small{font-size:12px;color:var(--muted)}
+  ul{margin:8px 0;padding-left:22px} ul li{margin:4px 0;color:var(--muted)}
+  .badge{font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700;vertical-align:middle}
+  .badge.req{background:rgba(248,81,73,.15);color:var(--red)}
+  .badge.opt{background:rgba(139,148,158,.15);color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-inner">
+    <h1>DeltaStudy.site — Complete API &amp; Data-Format Analysis</h1>
+    <p class="sub">Full reverse-engineering of how <b>deltastudy.site/study-v2/batches</b> loads batches, subjects, live classes, topics, and content — every endpoint, request body, response shape, route, and the AES-GCM encryption layer.</p>
+    <div class="meta">
+      <span class="chip">API Server: <b>apiserver.deltastudy.site</b></span>
+      <span class="chip">Frontend: <b>Next.js 15 App Router</b></span>
+      <span class="chip">Source: <b>Physics Wallah (penpencil.co)</b></span>
+      <span class="chip">Encryption: <b>AES-256-GCM</b></span>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+<div class="toc">
+  <strong style="font-size:14px">Contents</strong>
+  <ol>
+    <li><a href="#arch">Architecture Overview &amp; Data Flow</a></li>
+    <li><a href="#base">Base URLs &amp; Constants</a></li>
+    <li><a href="#auth">Authentication Flow (Login / Verify / Turnstile)</a></li>
+    <li><a href="#encryption">AES-GCM Encryption / Decryption Mechanism</a></li>
+    <li><a href="#batches">API 1 — Load All Batches</a></li>
+    <li><a href="#batchdetails">API 2 — Batch Details + Subjects</a></li>
+    <li><a href="#live">API 3 — Today's Live Classes</a></li>
+    <li><a href="#topics">API 4 — Topics for a Subject</a></li>
+    <li><a href="#content">API 5 — Content (Videos / Notes / DPP / Tests)</a></li>
+    <li><a href="#attachments">API 6 — Attachments, View &amp; Download</a></li>
+    <li><a href="#penpencil">Direct PW API (penpencil.co) Fallback</a></li>
+    <li><a href="#routes">All Frontend Routes</a></li>
+    <li><a href="#summary">Quick-Reference Cheat Sheet</a></li>
+  </ol>
+</div>
+
+<!-- ==================== 1. ARCHITECTURE ==================== -->
+<h2 id="arch"><span class="num">1</span> Architecture Overview &amp; Data Flow</h2>
+<p>DeltaStudy is a <b>Next.js 15 (App Router)</b> single-page application. The frontend talks to two backends:</p>
+<div class="flow">
+  <div class="flow-row">
+    <div class="flow-node"><div class="lbl">Browser</div><div class="val">deltastudy.site<br><span class="small">Next.js client</span></div></div>
+    <div class="flow-arrow">&#10142;</div>
+    <div class="flow-node"><div class="lbl">Static JSON</div><div class="val">/allbatches.json<br><span class="small">8,412 batches, cookie-gated</span></div></div>
+  </div>
+  <div style="height:8px"></div>
+  <div class="flow-row">
+    <div class="flow-node"><div class="lbl">Browser</div><div class="val">deltastudy.site<br><span class="small">Next.js client</span></div></div>
+    <div class="flow-arrow">&#10142;</div>
+    <div class="flow-node"><div class="lbl">Proxy API Server</div><div class="val">apiserver.deltastudy.site<br><span class="small">/api/pw/* — AES-encrypted responses</span></div></div>
+    <div class="flow-arrow">&#10142;</div>
+    <div class="flow-node"><div class="lbl">Upstream</div><div class="val">api.penpencil.co<br><span class="small">Physics Wallah real API</span></div></div>
+  </div>
+</div>
+<div class="callout blue">
+  <div class="ttl">How it works</div>
+  <p>1. <b>Batches list</b> is loaded from a static <code>/allbatches.json</code> file (served by the Next.js app, gated by Cloudflare Turnstile cookies).</p>
+  <p>2. <b>Batch details, subjects, topics, content</b> are fetched from <code>apiserver.deltastudy.site/api/pw/*</code>, which proxies the real Physics Wallah API at <code>api.penpencil.co</code>.</p>
+  <p>3. <b>Most proxy responses are AES-256-GCM encrypted</b> — the server returns a hex string <code>iv:ciphertext</code>; the client decrypts with a hardcoded key before use.</p>
+  <p>4. <b>Live classes</b> (<code>/api/pw/live</code>) are returned in <b>plaintext</b> (not encrypted).</p>
+</div>
+
+<!-- ==================== 2. BASE URLs ==================== -->
+<h2 id="base"><span class="num">2</span> Base URLs &amp; Constants</h2>
+<table>
+  <tr><th>Constant</th><th>Value</th><th>Used For</th></tr>
+  <tr><td><code>API_BASE</code></td><td><code>https://apiserver.deltastudy.site</code></td><td>All proxy API calls (<code>/api/pw/*</code>)</td></tr>
+  <tr><td><code>PW_API</code></td><td><code>https://api.penpencil.co</code></td><td>Direct PW fallback (batch details)</td></tr>
+  <tr><td><code>client-id</code></td><td><code>5eb393ee95fab7468a79d189</code></td><td>Header for penpencil.co calls</td></tr>
+  <tr><td><code>ENC_KEY</code></td><td><code>maggikhalo</code></td><td>AES-256-GCM decryption key (padded to 32 bytes)</td></tr>
+  <tr><td><code>BATCHES_JSON</code></td><td><code>/allbatches.json</code></td><td>Static batches catalog (same-origin)</td></tr>
+</table>
+<pre><span class="c">// From chunk 3171 (layout bundle):</span>
+<span class="k">const</span> API_BASE = <span class="s">"https://apiserver.deltastudy.site"</span>;
+
+<span class="c">// Direct PW fallback (in [batchId] page chunk):</span>
+fetch(<span class="s">`https://api.penpencil.co/v3/batches/${batchId}/details`</span>, {
+  headers: { <span class="s">"client-id"</span>: <span class="s">"5eb393ee95fab7468a79d189"</span>, accept: <span class="s">"*/*"</span> }
+});</pre>
+
+<!-- ==================== 3. AUTH ==================== -->
+<h2 id="auth"><span class="num">3</span> Authentication Flow</h2>
+<p>The site uses <b>Cloudflare Turnstile</b> for bot protection and an <b>OTP-based phone login</b> for access.</p>
+<div class="grid">
+  <div class="card">
+    <div class="ttl"><span class="dot" style="background:var(--blue)"></span>Turnstile Verify</div>
+    <p><code class="mono">POST /api/turnstile/verify</code></p>
+    <p class="small">Same-origin Next.js route. Verifies the Cloudflare Turnstile token and sets a session cookie that gates <code>/allbatches.json</code>.</p>
+  </div>
+  <div class="card">
+    <div class="ttl"><span class="dot" style="background:var(--green)"></span>Phone Login</div>
+    <p><code class="mono">POST {API_BASE}/api/pw/login</code></p>
+    <p>Body: <code class="mono">{phoneNumber, username}</code></p>
+    <p class="small">Sends an OTP to the phone number.</p>
+  </div>
+  <div class="card">
+    <div class="ttl"><span class="dot" style="background:var(--orange)"></span>OTP Verify</div>
+    <p><code class="mono">POST {API_BASE}/api/pw/verify</code></p>
+    <p>Body: <code class="mono">{otp, phoneNumber, username}</code></p>
+    <p class="small">Returns auth token on success.</p>
+  </div>
+</div>
+
+<!-- ==================== 4. ENCRYPTION ==================== -->
+<h2 id="encryption"><span class="num">4</span> AES-GCM Encryption / Decryption</h2>
+<div class="callout">
+  <div class="ttl">The proxy encrypts most responses before sending them to the browser</div>
+  <p>The server returns <code>{ "data": "<span class="hl">ivHex:ciphertextHex</span>" }</code> — a single string (or array of hex chars that must be joined). The client splits on <code>:</code>, converts both halves from hex, and decrypts with <b>AES-256-GCM</b>.</p>
+</div>
+<pre><span class="c">// Decryption function (module 44269, used everywhere):</span>
+<span class="k">const</span> ENC_KEY = <span class="s">"maggikhalo"</span>;  <span class="c">// hardcoded in client bundle</span>
+
+<span class="k">async function</span> <span class="p">decrypt</span>(encryptedPayload) {
+  <span class="c">// 1. Split "ivHex:ctHex"</span>
+  <span class="k">const</span> colonIdx = encryptedPayload.indexOf(<span class="s">":"</span>);
+  <span class="k">const</span> iv  = hexToBytes(encryptedPayload.slice(<span class="n">0</span>, colonIdx));
+  <span class="k">const</span> ct  = hexToBytes(encryptedPayload.slice(colonIdx + <span class="n">1</span>));
+
+  <span class="c">// 2. Derive 256-bit key (pad/truncate key string to 32 bytes)</span>
+  <span class="k">const</span> keyBytes = <span class="k">new</span> Uint8Array(<span class="n">32</span>);
+  <span class="k">const</span> enc = <span class="k">new</span> TextEncoder().encode(ENC_KEY);
+  <span class="k">for</span> (<span class="k">let</span> i = <span class="n">0</span>; i < <span class="n">32</span>; i++) keyBytes[i] = i < enc.length ? enc[i] : <span class="n">0</span>;
+
+  <span class="c">// 3. Import &amp; decrypt</span>
+  <span class="k">const</span> cryptoKey = <span class="k">await</span> crypto.subtle.importKey(
+    <span class="s">"raw"</span>, keyBytes, { name: <span class="s">"AES-GCM"</span>, length: <span class="n">256</span> }, <span class="k">false</span>, [<span class="s">"decrypt"</span>]
+  );
+  <span class="k">const</span> plaintext = <span class="k">await</span> crypto.subtle.decrypt(
+    { name: <span class="s">"AES-GCM"</span>, iv }, cryptoKey, ct
+  );
+
+  <span class="c">// 4. Parse JSON</span>
+  <span class="k">return</span> JSON.parse(<span class="k">new</span> TextDecoder().decode(plaintext));
+  <span class="c">// &#9654; { success: true, data: { ... actual payload ... } }</span>
+}
+
+<span class="k">function</span> hexToBytes(hex) {
+  <span class="k">const</span> a = <span class="k">new</span> Uint8Array(hex.length / <span class="n">2</span>);
+  <span class="k">for</span> (<span class="k">let</span> i = <span class="n">0</span>; i < hex.length; i += <span class="n">2</span>) a[i/<span class="n">2</span>] = parseInt(hex.substr(i, <span class="n">2</span>), <span class="n">16</span>);
+  <span class="k">return</span> a;
+}</pre>
+<div class="callout blue">
+  <div class="ttl">Which endpoints are encrypted?</div>
+  <p><span class="tag enc">ENCRYPTED</span> <code>/api/pw/batchdetails</code> &nbsp; <span class="tag enc">ENCRYPTED</span> <code>/api/pw/topics</code> &nbsp; <span class="tag enc">ENCRYPTED</span> <code>/api/pw/datacontent</code></p>
+  <p><span class="tag" style="border-color:rgba(63,185,80,.4);color:var(--green)">PLAINTEXT</span> <code>/api/pw/live</code> &nbsp; <span class="tag" style="border-color:rgba(63,185,80,.4);color:var(--green)">PLAINTEXT</span> <code>/api/pw/attachments-url</code> &nbsp; <span class="tag" style="border-color:rgba(63,185,80,.4);color:var(--green)">PLAINTEXT</span> <code>/api/pw/attachment-link</code></p>
+</div>
+
+<!-- ==================== 5. BATCHES ==================== -->
+<h2 id="batches"><span class="num">5</span> API 1 — Load All Batches</h2>
+<div class="ep">
+  <div class="ep-hdr"><span class="method m-get">GET</span><span class="ep-url">/allbatches.json  (same-origin: deltastudy.site/allbatches.json)</span></div>
+  <div class="ep-body">
+    <p><b>Auth:</b> <span class="tag auth">Requires Turnstile session cookie</span> — without it, the server returns the Next.js 404 HTML page instead of JSON.</p>
+    <p><b>Cache:</b> The client caches results in <code>localStorage</code> under a key, with a cache-busting <code>?v=Date.now()</code> on fetch.</p>
+    <p>The client maps each batch to only <code>{_id, name, previewImage, slug}</code> for the list view, but the full JSON contains all fields below.</p>
+  </div>
+</div>
+<h3>Response Format</h3>
+<div class="json">{ <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"batches"</span>: [
+    {
+      <span class="key">"_id"</span>: <span class="str">"698ad3519549b300a5e1cc6a"</span>,         <span class="arr">// MongoDB ID — used as batchId everywhere</span>
+      <span class="key">"name"</span>: <span class="str">"Arjuna JEE 2027"</span>,
+      <span class="key">"byName"</span>: <span class="str">"For IIT-JEE Aspirants"</span>,
+      <span class="key">"startDate"</span>: <span class="str">"13 Apr 2026"</span>,
+      <span class="key">"endDate"</span>: <span class="str">"30 Jun 2028"</span>,
+      <span class="key">"language"</span>: <span class="str">"Hinglish"</span>,
+      <span class="key">"previewImage"</span>: <span class="str">"https://static.pw.live/.../....jpeg"</span>,
+      <span class="key">"feeTotal"</span>: <span class="num">4999</span>,
+      <span class="key">"type"</span>: <span class="str">"E_BATCH"</span>,           <span class="arr">// or "REGULAR"</span>
+      <span class="key">"slug"</span>: <span class="str">"arjuna-jee-2027-243495"</span>,
+      <span class="key">"subBatches"</span>: []                        <span class="arr">// array of sub-batch objects (usually empty)</span>
+    }
+    <span class="arr">// ... 8,412 total batches</span>
+  ]
+}</div>
+<pre><span class="c">// Client code (batches page chunk):</span>
+<span class="k">let</span> t = <span class="k">await</span> fetch(<span class="s">"/allbatches.json"</span>);
+<span class="k">let</span> a = <span class="k">await</span> t.json();
+<span class="k">if</span> (a.success &amp;&amp; a.batches) {
+  <span class="k">let</span> mapped = a.batches.map(e =&gt; ({
+    _id: e._id, name: e.name, previewImage: e.previewImage, slug: e.slug
+  }));
+  setBatches(mapped);
+  localStorage.setItem(<span class="s">"batchesCache"</span>, JSON.stringify(mapped));
+}</pre>
+
+<!-- ==================== 6. BATCH DETAILS ==================== -->
+<h2 id="batchdetails"><span class="num">6</span> API 2 — Batch Details + Subjects</h2>
+<div class="ep">
+  <div class="ep-hdr"><span class="method m-post">POST</span><span class="ep-url">{API_BASE}/api/pw/batchdetails</span><span class="tag enc">ENCRYPTED</span></div>
+  <div class="ep-body">
+    <p><b>Request body (JSON):</b></p>
+    <pre>{ <span class="key">"searchParams"</span>: { <span class="key">"BatchId"</span>: <span class="s">"698ad3519549b300a5e1cc6a"</span> } }</pre>
+    <p><b>Raw response:</b> <code class="mono">{ "data": "ivHex:ctHex" }</code> (or <code>data</code> as an array of hex chars to join)</p>
+    <p><b>After decryption:</b> <code class="mono">{ success: true, data: { name, description, shortDescription, subjects[] } }</code></p>
+    <p><b>Fallback:</b> If decryption fails, the client calls <code>api.penpencil.co/v3/batches/{batchId}/details</code> directly (see &#167;11).</p>
+  </div>
+</div>
+<h3>Decrypted Response — Subjects Array</h3>
+<div class="json">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"name"</span>: <span class="str">"Arjuna JEE 2027"</span>,
+    <span class="key">"description"</span>: <span class="str">"&lt;HTML string with batch features&gt;"</span>,
+    <span class="key">"shortDescription"</span>: <span class="str">"&lt;HTML string with duration, validity, subjects&gt;"</span>,
+    <span class="key">"subjects"</span>: [
+      {
+        <span class="key">"subject"</span>: <span class="str">"Physics By Rajwant Singh Sir"</span>,   <span class="arr">// display name</span>
+        <span class="key">"slug"</span>: <span class="str">"physics-by-rajwant-singh-sir-964222"</span>,<span class="arr">// used in URL route</span>
+        <span class="key">"subjectId"</span>: <span class="str">"69b5698ee506a608ee297ed1"</span>,       <span class="arr">// used in API calls</span>
+        <span class="key">"_id"</span>: <span class="str">"69b5698ee506a608ee297ed1"</span>             <span class="arr">// same as subjectId</span>
+      },
+      <span class="arr">// ... 12 subjects total (Physics, Chemistry, Maths, Notices, etc.)</span>
+    ]
+  }
+}</div>
+<pre><span class="c">// Client code ([batchId] page chunk):</span>
+<span class="k">let</span> e = <span class="k">await</span> fetch(<span class="s">`</span>${API_BASE}<span class="s">/api/pw/batchdetails`</span>, {
+  method: <span class="s">"POST"</span>,
+  headers: { <span class="s">"Content-Type"</span>: <span class="s">"application/json"</span> },
+  body: JSON.stringify({ searchParams: { BatchId: batchId } })
+});
+<span class="k">let</span> t = <span class="k">await</span> e.json();
+<span class="k">if</span> (!t.data) <span class="k">throw</span> Error(<span class="s">"No encrypted data"</span>);
+<span class="k">let</span> s = <span class="k">await</span> decrypt(t.data);   <span class="c">// &#9654; { success, data: { subjects, ... } }</span>
+<span class="k">if</span> (s.success) setBatchDetails(s.data);</pre>
+
+<!-- ==================== 7. LIVE CLASSES ==================== -->
+<h2 id="live"><span class="num">7</span> API 3 — Today's Live Classes</h2>
+<div class="ep">
+  <div class="ep-hdr"><span class="method m-post">POST</span><span class="ep-url">{API_BASE}/api/pw/live</span><span class="tag" style="border-color:rgba(63,185,80,.4);color:var(--green)">PLAINTEXT</span></div>
+  <div class="ep-body">
+    <p><b>Request body (JSON):</b></p>
+    <pre>{ <span class="key">"batchId"</span>: <span class="s">"698ad3519549b300a5e1cc6a"</span> }</pre>
+    <p><b>Response:</b> <code class="mono">{ "data": [ ...schedule objects... ] }</code> — returned in <b>plaintext</b>, no decryption needed.</p>
+    <p>Shows today's classes (live + notes + upcoming). The UI shows <code>lectureType</code>, <code>tag</code> ("Upcoming"/"Live"/"Notes"), and a "Play"/"Open PDF" button.</p>
+  </div>
+</div>
+<h3>Response Format — Schedule Object (74 fields, key ones shown)</h3>
+<div class="json">{
+  <span class="key">"data"</span>: [
+    {
+      <span class="key">"_id"</span>: <span class="str">"6a5b6b82e5d5d053c42ae504"</span>,
+      <span class="key">"topic"</span>: <span class="str">"Chemical Bonding 09 : Chemical Bonding || DPP..."</span>,
+      <span class="key">"lectureType"</span>: <span class="str">"LIVE"</span>,              <span class="arr">// "LIVE" or "RECORDED"</span>
+      <span class="key">"date"</span>: <span class="str">"2026-07-25T00:00:00.000Z"</span>,
+      <span class="key">"startTime"</span>: <span class="str">"2026-07-25T10:30:00.000Z"</span>,
+      <span class="key">"endTime"</span>: <span class="str">"2026-07-25T13:30:00.000Z"</span>,
+      <span class="key">"status"</span>: <span class="str">"PENDING"</span>,             <span class="arr">// "PENDING", "LIVE", "COMPLETED"</span>
+      <span class="key">"tag"</span>: <span class="str">"Upcoming"</span>,             <span class="arr">// "Upcoming", "Live", "Notes"</span>
+      <span class="key">"urlType"</span>: <span class="str">"vimeo"</span>,              <span class="arr">// "vimeo", "youtube", "zoom"</span>
+      <span class="key">"url"</span>: <span class="str">""</span>,                     <span class="arr">// stream URL (filled when live)</span>
+      <span class="key">"slug"</span>: <span class="str">"chemical-bonding-09---..."</span>,
+      <span class="key">"scheduleCode"</span>: <span class="str">"AKTQ"</span>,
+      <span class="key">"isVideoLecture"</span>: <span class="bool">false</span>,         <span class="arr">// true &#9654; shows "Play"</span>
+      <span class="key">"hasAttachment"</span>: <span class="bool">false</span>,          <span class="arr">// true &#9654; shows "Open PDF"</span>
+      <span class="key">"batchId"</span>: <span class="str">"698ad3519549b300a5e1cc6a"</span>,
+      <span class="key">"batchSubjectId"</span>: <span class="str">"69b569cab32b3601588a690b"</span>,
+      <span class="key">"subjectId"</span>: {                      <span class="arr">// nested subject object</span>
+        <span class="key">"_id"</span>: <span class="str">"681cb395f9a9aca4a4b4891a"</span>,
+        <span class="key">"name"</span>: <span class="str">"Inorganic Chemistry By Kunwar Om Pandey Sir"</span>,
+        <span class="key">"slug"</span>: <span class="str">"inorganic-chemistry--867754"</span>
+      },
+      <span class="key">"tags"</span>: [{ <span class="key">"_id"</span>: <span class="str">"..."</span>, <span class="key">"name"</span>: <span class="str">"Chemical Bonding"</span> }],
+      <span class="key">"teachers"</span>: [<span class="str">"63689057ef30b800110f8705"</span>],
+      <span class="key">"isFree"</span>: <span class="bool">false</span>,
+      <span class="key">"isChatEnabled"</span>: <span class="bool">true</span>,
+      <span class="key">"isDoubtEnabled"</span>: <span class="bool">true</span>,
+      <span class="key">"isRecordingEnabled"</span>: <span class="bool">false</span>,
+      <span class="key">"contentType"</span>: [],
+      <span class="key">"videoDetails"</span>: <span class="bool">null</span>,
+      <span class="key">"publicUrl"</span>: <span class="str">""</span>,
+      <span class="key">"previewImageUrl"</span>: <span class="str">""</span>
+      <span class="arr">// ... 50+ more boolean/field flags</span>
+    }
+    <span class="arr">// ... 8 classes for today</span>
+  ]
+}</div>
+
+<!-- ==================== 8. TOPICS ==================== -->
+<h2 id="topics"><span class="num">8</span> API 4 — Topics for a Subject</h2>
+<div class="ep">
+  <div class="ep-hdr"><span class="method m-get">GET</span><span class="ep-url">{API_BASE}/api/pw/topics?BatchId={batchId}&amp;SubjectId={subjectSlug}</span><span class="tag enc">ENCRYPTED</span></div>
+  <div class="ep-body">
+    <p><b>Query params:</b></p>
+    <p><span class="badge req">REQUIRED</span> <code>BatchId</code> — the batch MongoDB <code>_id</code></p>
+    <p><span class="badge req">REQUIRED</span> <code>SubjectId</code> — the subject <b>slug</b> (e.g. <code>physics-by-rajwant-singh-sir-964222</code>)</p>
+    <p><b>Note:</b> Despite the param name "SubjectId", it takes the subject <b>slug</b>, not the MongoDB ID.</p>
+    <p><b>Raw response:</b> <code class="mono">{ "data": "ivHex:ctHex" }</code></p>
+    <p><b>After decryption:</b> <code class="mono">{ success: true, data: [ { _id, name, slug }, ... ] }</code></p>
+  </div>
+</div>
+<h3>Decrypted Response</h3>
+<div class="json">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: [
+    {
+      <span class="key">"_id"</span>: <span class="str">"69b571ed5582e24e8c2c3361"</span>,          <span class="arr">// topicId</span>
+      <span class="key">"name"</span>: <span class="str">"PYQ Practice Sheet || Only PDF"</span>,  <span class="arr">// display name</span>
+      <span class="key">"slug"</span>: <span class="str">"pyq-practice-sheet-||-only-pdf-188865"</span> <span class="arr">// used in URL + datacontent</span>
+    },
+    { <span class="key">"_id"</span>: <span class="str">"69b5720d995ec8a0398cd659"</span>, <span class="key">"name"</span>: <span class="str">"Short Notes || Only PDF"</span>, <span class="key">"slug"</span>: <span class="str">"short-notes-||-only-pdf-881259"</span> },
+    <span class="arr">// ... 22 topics per subject</span>
+  ]
+}</div>
+<pre><span class="c">// Client code ([subjectSlug] page chunk):</span>
+<span class="k">let</span> url = <span class="k">new</span> URL(<span class="s">`</span>${API_BASE}<span class="s">/api/pw/topics`</span>);
+url.searchParams.append(<span class="s">"BatchId"</span>, batchId);
+url.searchParams.append(<span class="s">"SubjectId"</span>, subjectSlug);  <span class="c">// note: it's the SLUG</span>
+<span class="k">let</span> t = <span class="k">await</span> fetch(url.toString());
+<span class="k">let</span> a = <span class="k">await</span> t.json();
+<span class="k">let</span> s = <span class="k">await</span> decrypt(a.data);
+<span class="k">if</span> (s.success &amp;&amp; Array.isArray(s.data)) setTopics(s.data);</pre>
+
+<!-- ==================== 9. CONTENT ==================== -->
+<h2 id="content"><span class="num">9</span> API 5 — Content (Videos / Notes / DPP / Tests)</h2>
+<div class="ep">
+  <div class="ep-hdr"><span class="method m-get">GET</span><span class="ep-url">{API_BASE}/api/pw/datacontent?batchId=...&amp;subjectSlug=...&amp;topicSlug=...&amp;contentType=...</span><span class="tag enc">ENCRYPTED</span></div>
+  <div class="ep-body">
+    <p><b>Two calling modes:</b></p>
+    <p><b>Mode A (slug-based):</b> <code class="mono">?batchId={id}&amp;subjectSlug={slug}&amp;topicSlug={topicSlug}&amp;contentType={type}</code></p>
+    <p><b>Mode B (ID-based):</b> <code class="mono">?batchId={id}&amp;subjectId={subjectId}&amp;topicId={topicId}&amp;contentType={type}</code></p>
+    <p><b>contentType values:</b></p>
+    <p><span class="tag">videos</span> <span class="tag">notes</span> <span class="tag">dpp-tests</span> <span class="tag">dppVideos</span> <span class="tag">dpp-notes</span> <span class="tag">lectures</span></p>
+    <p><b>Raw response:</b> <code class="mono">{ "data": "ivHex:ctHex" }</code></p>
+    <p><b>After decryption:</b> <code class="mono">{ success: true, data: [ { ...content objects... } ] }</code></p>
+  </div>
+</div>
+<h3>Decrypted Response — Content Object</h3>
+<div class="json">{
+  <span class="key">"success"</span>: <span class="bool">true</span>,
+  <span class="key">"data"</span>: [
+    {
+      <span class="key">"_id"</span>: <span class="str">"69ce879a58a0411e9cf01972"</span>,
+      <span class="key">"topic"</span>: <span class="str">"Bridge Course : Basic Physics Class 9th..."</span>,
+      <span class="key">"name"</span>: <span class="str">"Bridge Course Lecture"</span>,
+      <span class="key">"contentType"</span>: <span class="str">"lectures"</span>,
+      <span class="key">"status"</span>: <span class="str">"COMPLETED"</span>,
+      <span class="key">"date"</span>: <span class="str">"2026-04-03T00:00:00.000Z"</span>,
+      <span class="key">"startTime"</span>: <span class="str">"2026-04-03T10:30:00.000Z"</span>,
+      <span class="key">"url"</span>: <span class="str">""</span>,                    <span class="arr">// video stream URL</span>
+      <span class="key">"pdf_url"</span>: <span class="str">"https://..."</span>,       <span class="arr">// for notes/PDF content</span>
+      <span class="key">"video_id"</span>: <span class="str">"..."</span>,            <span class="arr">// Vimeo/YT video ID</span>
+      <span class="key">"needs_fetching"</span>: <span class="bool">true</span>,      <span class="arr">// if true, fetch via attachment-link</span>
+      <span class="key">"original_schedule_id"</span>: <span class="str">"..."</span>, <span class="arr">// used in attachment-link call</span>
+      <span class="key">"isFree"</span>: <span class="bool">false</span>,
+      <span class="key">"isDPPNotes"</span>: <span class="bool">false</span>,
+      <span class="key">"isDPPVideos"</span>: <span class="bool">false</span>,
+      <span class="key">"isVideoLecture"</span>: <span class="bool">true</span>,
+      <span class="key">"hasAttachment"</span>: <span class="bool">false</span>
+      <span class="arr">// ... many more schedule fields</span>
+    }
+  ]
+}</div>
+<pre><span class="c">// Client code ([topicSlug] page chunk) — fetches all content types in parallel:</span>
+<span class="k">const</span> contentTypes = [<span class="s">"videos"</span>, <span class="s">"notes"</span>, <span class="s">"dpp-tests"</span>];
+
+<span class="k">for</span> (<span class="k">const</span> ct <span class="k">of</span> contentTypes) {
+  <span class="c">// Try ID-based first, fall back to slug-based:</span>
+  <span class="k">let</span> url = <span class="s">`</span>${API_BASE}<span class="s">/api/pw/datacontent?batchId=</span>${batchId}<span class="s">&amp;subjectId=</span>${subjectId}<span class="s">&amp;topicId=</span>${topicId}<span class="s">&amp;contentType=</span>${ct}<span class="s">`</span>;
+  <span class="k">let</span> r = <span class="k">await</span> fetch(url);
+  <span class="k">let</span> j = <span class="k">await</span> r.json();
+  <span class="k">if</span> (!j.data) {
+    <span class="c">// Fallback: slug-based</span>
+    url = <span class="s">`</span>${API_BASE}<span class="s">/api/pw/datacontent?batchId=</span>${batchId}<span class="s">&amp;subjectSlug=</span>${subjectSlug}<span class="s">&amp;topicSlug=</span>${encodeURIComponent(topicSlug)}<span class="s">&amp;contentType=</span>${ct}<span class="s">`</span>;
+    r = <span class="k">await</span> fetch(url); j = <span class="k">await</span> r.json();
+  }
+  <span class="k">let</span> dec = <span class="k">await</span> decrypt(j.data);
+  <span class="k">if</span> (dec.success) setContent(ct, dec.data);
+}</pre>
+
+<!-- ==================== 10. ATTACHMENTS ==================== -->
+<h2 id="attachments"><span class="num">10</span> API 6 — Attachments, View &amp; Download</h2>
+<div class="grid">
+  <div class="card">
+    <div class="ttl"><span class="dot" style="background:var(--blue)"></span>Attachments URL</div>
+    <p><code class="mono">GET {API_BASE}/api/pw/attachments-url?BatchId={bid}&amp;SubjectId={sid}&amp;ContentId={cid}</code></p>
+    <p class="small">Returns <code>{ success, data: [url, ...] }</code>. Opens first URL in new tab. Used when <code>hasAttachment=true</code> on a live class.</p>
+  </div>
+  <div class="card">
+    <div class="ttl"><span class="dot" style="background:var(--orange)"></span>Attachment Link</div>
+    <p><code class="mono">GET {API_BASE}/api/pw/attachment-link?batchId={bid}&amp;subjectId={sid}&amp;scheduleId={orig_schedule_id}</code></p>
+    <p class="small">Returns decrypted <code>{ data: { url, ... } }</code>. Used for PDFs that need fetching (<code>needs_fetching=true</code>).</p>
+  </div>
+  <div class="card">
+    <div class="ttl"><span class="dot" style="background:var(--green)"></span>View (in browser)</div>
+    <p><code class="mono">GET {API_BASE}/api/pw/view?url={encodedUrl}&amp;filename={name}</code></p>
+    <p class="small">Opens a file/PDF inline in a new browser tab. <code>window.open()</code> redirect.</p>
+  </div>
+  <div class="card">
+    <div class="ttl"><span class="dot" style="background:var(--red)"></span>Download</div>
+    <p><code class="mono">GET {API_BASE}/api/pw/download?url={encodedUrl}&amp;filename={name}</code></p>
+    <p class="small">Triggers a file download (<code>window.location.href</code> redirect). Used for PDFs and notes.</p>
+  </div>
+</div>
+
+<!-- ==================== 11. PENPENCIL ==================== -->
+<h2 id="penpencil"><span class="num">11</span> Direct PW API Fallback (api.penpencil.co)</h2>
+<div class="callout red">
+  <div class="ttl">When the encrypted proxy fails, the client falls back to the real Physics Wallah API directly</div>
+  <p>Both the <code>[batchId]</code> and <code>[topicSlug]</code> page chunks call this as a fallback/primary source for batch details.</p>
+</div>
+<div class="ep">
+  <div class="ep-hdr"><span class="method m-get">GET</span><span class="ep-url">https://api.penpencil.co/v3/batches/{batchId}/details</span></div>
+  <div class="ep-body">
+    <p><b>Headers:</b></p>
+    <pre>accept: <span class="s">"*/*"</span>
+accept-encoding: <span class="s">"gzip, deflate, br"</span>
+accept-language: <span class="s">"en-US,en;q=0.9"</span>
+client-id: <span class="s">"5eb393ee95fab7468a79d189"</span></pre>
+    <p><b>Response:</b> Plaintext JSON — the real PW batch details object (same structure as the decrypted proxy response, but unencrypted and with more fields like <code>tags</code>, <code>batchAnnouncement</code>, etc.)</p>
+  </div>
+</div>
+
+<!-- ==================== 12. ROUTES ==================== -->
+<h2 id="routes"><span class="num">12</span> All Frontend Routes</h2>
+<p>These are the Next.js App Router dynamic routes discovered in the client bundle:</p>
+<table>
+  <tr><th>Route Pattern</th><th>Purpose</th><th>API Calls Made</th></tr>
+  <tr>
+    <td><code>/study-v2/batches</code></td>
+    <td>Batches catalog (8,412 batches, filterable list)</td>
+    <td><code>GET /allbatches.json</code></td>
+  </tr>
+  <tr>
+    <td><code>/study-v2/batches/<b>[batchId]</b></code></td>
+    <td>Batch detail — shows subjects + today's live classes</td>
+    <td><code>POST /api/pw/batchdetails</code><br><code>POST /api/pw/live</code><br><code>GET penpencil.co/v3/batches/{id}/details</code> (fallback)</td>
+  </tr>
+  <tr>
+    <td><code>/study-v2/batches/[batchId]/<b>[subjectSlug]</b></code></td>
+    <td>Subject page — lists all topics in the subject</td>
+    <td><code>GET /api/pw/topics?BatchId=&amp;SubjectId=</code></td>
+  </tr>
+  <tr>
+    <td><code>/study-v2/batches/[batchId]/[subjectSlug]/<b>[topicSlug]</b></code></td>
+    <td>Topic page — shows videos, notes, DPP, tests</td>
+    <td><code>GET /api/pw/datacontent</code> (x3 content types)<br><code>GET /api/pw/attachment-link</code><br><code>GET /api/pw/attachments-url</code><br><code>GET /api/pw/view</code> / <code>/api/pw/download</code></td>
+  </tr>
+  <tr>
+    <td><code>/study-v2/batches/[batchId]/announcements</code></td>
+    <td>Batch announcements</td>
+    <td>(from batch details data)</td>
+  </tr>
+  <tr>
+    <td><code>/study-v2/tests?testId=...</code></td>
+    <td>Test/quiz page</td>
+    <td>(test content APIs)</td>
+  </tr>
+  <tr>
+    <td><code>/verify</code></td>
+    <td>OTP phone verification page</td>
+    <td><code>POST /api/pw/login</code><br><code>POST /api/pw/verify</code></td>
+  </tr>
+</table>
+
+<h3>URL Parameter Flow</h3>
+<pre><span class="c">// Batches list &#10142; click a batch:</span>
+/study-v2/batches/<span class="n">{batchId}</span>?name=<span class="n">{batchName}</span>
+
+<span class="c">// Batch &#10142; click a subject:</span>
+/study-v2/batches/<span class="n">{batchId}</span>/<span class="n">{subjectSlug}</span>?subjectName=<span class="n">{name}</span>&amp;subjectId=<span class="n">{subjectId}</span>
+
+<span class="c">// Subject &#10142; click a topic:</span>
+/study-v2/batches/<span class="n">{batchId}</span>/<span class="n">{subjectSlug}</span>/<span class="n">{topicSlug}</span>?topicName=<span class="n">{name}</span>&amp;topicId=<span class="n">{topicId}</span>&amp;subjectId=<span class="n">{sid}</span>&amp;subjectName=<span class="n">{sname}</span>
+
+<span class="c">// Topic &#10142; click a test:</span>
+/study-v2/tests?testId=<span class="n">{testId}</span></pre>
+
+<!-- ==================== 13. SUMMARY ==================== -->
+<h2 id="summary"><span class="num">13</span> Quick-Reference Cheat Sheet</h2>
+<table>
+  <tr><th>What</th><th>Endpoint</th><th>Method</th><th>Encrypted?</th><th>Key Params</th></tr>
+  <tr><td>All batches</td><td><code>/allbatches.json</code></td><td>GET</td><td>No</td><td>(cookie-gated)</td></tr>
+  <tr><td>Batch details + subjects</td><td><code>/api/pw/batchdetails</code></td><td>POST</td><td><span class="tag enc">YES</span></td><td>body: <code>{searchParams:{BatchId}}</code></td></tr>
+  <tr><td>Today's live classes</td><td><code>/api/pw/live</code></td><td>POST</td><td>No</td><td>body: <code>{batchId}</code></td></tr>
+  <tr><td>Topics for subject</td><td><code>/api/pw/topics</code></td><td>GET</td><td><span class="tag enc">YES</span></td><td><code>?BatchId=&amp;SubjectId={slug}</code></td></tr>
+  <tr><td>Content (videos/notes/DPP)</td><td><code>/api/pw/datacontent</code></td><td>GET</td><td><span class="tag enc">YES</span></td><td><code>?batchId=&amp;subjectSlug=&amp;topicSlug=&amp;contentType=</code></td></tr>
+  <tr><td>Attachment URLs</td><td><code>/api/pw/attachments-url</code></td><td>GET</td><td>No</td><td><code>?BatchId=&amp;SubjectId=&amp;ContentId=</code></td></tr>
+  <tr><td>Attachment link (fetch)</td><td><code>/api/pw/attachment-link</code></td><td>GET</td><td>No</td><td><code>?batchId=&amp;subjectId=&amp;scheduleId=</code></td></tr>
+  <tr><td>View file inline</td><td><code>/api/pw/view</code></td><td>GET</td><td>No</td><td><code>?url=&amp;filename=</code></td></tr>
+  <tr><td>Download file</td><td><code>/api/pw/download</code></td><td>GET</td><td>No</td><td><code>?url=&amp;filename=</code></td></tr>
+  <tr><td>Phone login</td><td><code>/api/pw/login</code></td><td>POST</td><td>No</td><td>body: <code>{phoneNumber, username}</code></td></tr>
+  <tr><td>OTP verify</td><td><code>/api/pw/verify</code></td><td>POST</td><td>No</td><td>body: <code>{otp, phoneNumber, username}</code></td></tr>
+  <tr><td>PW direct fallback</td><td><code>api.penpencil.co/v3/batches/{id}/details</code></td><td>GET</td><td>No</td><td>header: <code>client-id</code></td></tr>
+</table>
+
+<div class="callout blue" style="margin-top:32px">
+  <div class="ttl">Full Loading Sequence (step by step)</div>
+  <p><b>1.</b> User visits <code>/study-v2/batches</code> &#10142; browser fetches <code>/allbatches.json</code> (needs Turnstile cookie) &#10142; renders 8,412 batch cards.</p>
+  <p><b>2.</b> User clicks a batch &#10142; navigates to <code>/study-v2/batches/{batchId}</code> &#10142; calls <code>POST /api/pw/batchdetails</code> (encrypted) + <code>POST /api/pw/live</code> (plaintext) &#10142; decrypts batch details &#10142; renders subjects list + today's live classes.</p>
+  <p><b>3.</b> User clicks a subject &#10142; navigates to <code>/study-v2/batches/{batchId}/{subjectSlug}</code> &#10142; calls <code>GET /api/pw/topics?BatchId=&amp;SubjectId={slug}</code> (encrypted) &#10142; decrypts &#10142; renders topic list.</p>
+  <p><b>4.</b> User clicks a topic &#10142; navigates to <code>/study-v2/batches/{batchId}/{subjectSlug}/{topicSlug}</code> &#10142; calls <code>GET /api/pw/datacontent?...&amp;contentType=videos</code>, <code>=notes</code>, <code>=dpp-tests</code> (all encrypted, in parallel) &#10142; decrypts each &#10142; renders videos/notes/DPP tabs.</p>
+  <p><b>5.</b> User clicks a video/PDF &#10142; calls <code>/api/pw/attachment-link</code> or <code>/api/pw/attachments-url</code> &#10142; opens via <code>/api/pw/view</code> or downloads via <code>/api/pw/download</code>.</p>
+</div>
+
+</div>
+</body>
+</html>

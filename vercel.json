@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "framework": "vite",
+  "buildCommand": "BASE_PATH=/ PORT=4173 pnpm --filter @workspace/edutoppers run build",
+  "outputDirectory": "artifacts/edutoppers/dist/public",
+  "rewrites": [
+    {
+      "source": "/((?!api(?:/|$)).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

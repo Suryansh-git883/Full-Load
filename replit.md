@@ -1,6 +1,6 @@
-# [Project name]
+# Bro Code PW
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Bro Code PW is a study platform for browsing courses, lectures, notes, topics, and live classes.
 
 ## Run & Operate
 
@@ -22,23 +22,26 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/edutoppers` — the Bro Code PW React/Vite study experience
+- `artifacts/api-server` — upstream Physics Wallah data proxy and HLS helper
+- `vercel.json` and `api/[[...path]].ts` — Vercel static hosting and serverless API entrypoint
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- The frontend calls `/api/pw/*`, so the same relative API paths work in Replit preview and Vercel.
+- Vercel serves the Vite output statically and runs the existing Express API as a serverless function.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+Browse available batches, explore subjects and topics, watch lectures, read notes, view schedules, and access live classes.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+The public website name is Bro Code PW.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Vite requires `BASE_PATH` and `PORT` during builds; the Vercel build command supplies both.
 
 ## Pointers
 
